@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <!-- 文本输入框 -->
+    <EditText
+        android:id="@+id/editTextTest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter text to synthesize"
+        android:inputType="textMultiLine"
+        android:minLines="3" />
+
+    <!-- 合成按钮 -->
+    <Button
+        android:id="@+id/synthesizeButtonTest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Synthesize"
+        android:layout_marginTop="16dp" />
+
+    <!-- 输出信息显示 -->
+    <TextView
+        android:id="@+id/outputMessageTest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="当前任务数：0"
+        android:textSize="16sp"
+        android:layout_marginTop="16dp"
+        android:padding="8dp"
+        android:background="#f0f0f0"
+        android:scrollbars="vertical" />
+
+<!--    <Button-->
+<!--        android:id="@+id/btnClearFiles"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="清除dumps" />-->
+</LinearLayout>
