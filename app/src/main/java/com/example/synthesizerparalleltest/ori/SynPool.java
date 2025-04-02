@@ -1,20 +1,12 @@
-package com.example.synthesizerparalleltest;
+package com.example.synthesizerparalleltest.ori;
 
 import android.content.Context;
 import android.util.Log;
 
 import com.example.synthesizerparalleltest.config.TTSConfig;
-import com.example.synthesizerparalleltest.events.PlayCompleted;
+import com.example.synthesizerparalleltest.ori.Synthesizer;
 
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
-
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
