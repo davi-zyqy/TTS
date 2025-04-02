@@ -5,13 +5,18 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.os.BuildCompat;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.example.synthesizerparalleltest.config.TTSConfig;
@@ -40,6 +45,10 @@ public class TestActivity extends AppCompatActivity {
     private TextView outputMessage;
     private Button synthesizeButton;
 
+    private Spinner textSpinner;
+    private ArrayAdapter<String> textAdapter;
+    private String[] defaultTexts;
+
 //    private final String HH_SPEECH_KEY = System.getenv("HH_SPEECH_KEY");
 //    private final String MODEL_KEY = System.getenv("MODEL_KEY");
 
@@ -52,21 +61,44 @@ public class TestActivity extends AppCompatActivity {
         outputMessage = findViewById(R.id.outputMessageTest);
         synthesizeButton = findViewById(R.id.synthesizeButtonTest);
 
+        defaultTexts = getResources().getStringArray(R.array.default_texts);
+        textSpinner = findViewById(R.id.textSpinnerTest);
+        textAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, defaultTexts);
+        textAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        textSpinner.setAdapter(textAdapter);
+
 
         synthesizeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String text = editText.getText().toString();
-                submitConcurrentTask(text);
-//                if (text.isEmpty()) {
-//                    String timeStamp = new SimpleDateFormat("dd-MM-yyyy-hh-mm-ss").format(new Date());
-//                    String selectedText = timeStamp + "-" + textSpinner.getSelectedItem().toString();
-//                    submitConcurrentTask(selectedText);
-//                } else {
-//                    submitConcurrentTask(text);
-//                }
-//                synthesizeText(text);
+                if (!text.isEmpty()) {
+                    submitConcurrentTask(text);
+                }
 
+            }
+        });
+
+        textSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String timeStamp = new SimpleDateFormat("dd-MM-yyyy-hh-mm-ss").format(new Date());
+                String selectedItem = (String) parent.getItemAtPosition(position);
+                String selectedText = timeStamp + "---" + selectedItem;
+                editText.setText(selectedText);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+
+        textSpinner.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                hideKeyboard();
+                return false;
             }
         });
 
@@ -95,7 +127,6 @@ public class TestActivity extends AppCompatActivity {
 
         synPool = new SimplePool(this, ttsConfig, 5, false);
 
-        // 初始化线程池
         executorService = Executors.newFixedThreadPool(5);
     }
 
@@ -141,5 +172,14 @@ public class TestActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             outputMessage.setText("当前任务数: " + currentSynthesisingCnt);
         });
+    }
+
+    private void hideKeyboard() {
+        View currentFocus = getCurrentFocus();
+        if (currentFocus != null) {
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(currentFocus.getWindowToken(), 0);
+            currentFocus.clearFocus();
+        }
     }
 }

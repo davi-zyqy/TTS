@@ -1,4 +1,4 @@
-package com.example.synthesizerparalleltest;
+package com.example.synthesizerparalleltest.ori;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -15,6 +15,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.synthesizerparalleltest.BuildConfig;
+import com.example.synthesizerparalleltest.R;
 import com.example.synthesizerparalleltest.config.TTSConfig;
 import com.example.synthesizerparalleltest.config.TTSPolicy;
 import com.example.synthesizerparalleltest.events.PlayCompleted;
@@ -28,7 +30,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainActivity extends AppCompatActivity {

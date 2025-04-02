@@ -1,9 +1,10 @@
-package com.example.synthesizerparalleltest;
+package com.example.synthesizerparalleltest.ori;
 
 import android.content.Context;
 import android.util.Log;
 
 import com.example.synthesizerparalleltest.config.TTSConfig;
+import com.example.synthesizerparalleltest.ori.Synthesizer;
 
 import java.util.LinkedList;
 import java.util.concurrent.locks.Lock;
