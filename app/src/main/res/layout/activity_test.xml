@@ -43,6 +43,29 @@
         android:layout_marginTop="10dp"
         android:prompt="@string/text_spinner_prompt" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp">
+
+        <Button
+            android:id="@+id/longTestButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="长测试"
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/stopTestButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="停止测试"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
+
 <!--    <Button-->
 <!--        android:id="@+id/btnClearFiles"-->
 <!--        android:layout_width="wrap_content"-->
