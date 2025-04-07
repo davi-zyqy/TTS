@@ -20,6 +20,9 @@ import com.microsoft.cognitiveservices.speech.SpeechSynthesizer;
 
 import org.greenrobot.eventbus.EventBus;
 
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.ExecutionException;
@@ -35,14 +38,23 @@ public class SimpleSynthesizer {
     private Connection connection;
     private AudioAttributes currentAudioAttributes;
     public AudioDataStream audioDataStream;
+//    private FileOutputStream fos;
+    private String currentPcmFilePath;
+    private static final int BUFFER_SIZE = 4096;
+    private BufferedOutputStream bufferedStream;
+    private final Object fileLock = new Object();
+    private volatile boolean isWriting = false;
 
     public Runnable onCompleted;
     public Runnable onCanceled;
+    private OnCompletedListener onCompletedResults;
 
     private String offlineVoiceName;
     private String offLineVoiceKey;
     private String ssmlPattern;
     private String ssml;
+
+    private String resultFileName;
 
     public SimpleSynthesizer(Context context, TTSConfig ttsConfig) {
         this.context = context;
@@ -169,6 +181,27 @@ public class SimpleSynthesizer {
                     "Synthesizing. received %d bytes. Finished by: %s.",
                     e.getResult().getAudioLength(),
                     backend));
+
+            byte[] audioData = e.getResult().getAudioData();
+            if (audioData != null && audioData.length > 0) {
+                synchronized (fileLock) {
+                    if (bufferedStream != null && !isWriting) {
+                        isWriting = true;
+                        try {
+                            bufferedStream.write(audioData);
+                        } catch (IOException ex) {
+                            Log.e("DUMP", "Write error: " + ex.getMessage());
+                        } finally {
+                            isWriting = false;
+                        }
+                    }
+                }
+//                try {
+//                    fos.write(audioData);
+//                } catch (IOException ex) {
+//                    Log.e(LOGTAG, "Failed to write PCM data: " + ex.getMessage());
+//                }
+            }
             e.close();
         });
 
@@ -184,14 +217,49 @@ public class SimpleSynthesizer {
             Log.i(LOGTAG, "First byte latency: " + e.getResult().getProperties().getProperty(PropertyId.SpeechServiceResponse_SynthesisFirstByteLatencyMs) + " ms.");
             Log.i(LOGTAG, "Last byte latency: " + e.getResult().getProperties().getProperty(PropertyId.SpeechServiceResponse_SynthesisFinishLatencyMs) + " ms.");
             Log.i(LOGTAG, "Audio duration: " + e.getResult().getAudioLength() * 1000 / 24000 / 2 + " ms.");
-            e.close();
+
 
             alterToHybrid();
 
 //            EventBus.getDefault().post(new SynthesizerCompleted("interactionId"));
-            if (this.onCompleted != null) {
-                this.onCompleted.run();
+//            if (this.onCompleted != null) {
+//                this.onCompleted.run();
+//            }
+
+            if (this.onCompletedResults != null) {
+                String resultId = "Synthesis finished by " + e.getResult().getProperties().getProperty(PropertyId.SpeechServiceResponse_SynthesisBackend) + ". Result Id: " + e.getResult().getResultId();
+                String firstByteLatency = "First byte latency: " + e.getResult().getProperties().getProperty(PropertyId.SpeechServiceResponse_SynthesisFirstByteLatencyMs) + " ms.";
+                String lastByteLatency = "Last byte latency: " + e.getResult().getProperties().getProperty(PropertyId.SpeechServiceResponse_SynthesisFinishLatencyMs) + " ms.";
+                String duration = "Audio duration: " + e.getResult().getAudioLength() * 1000 / 24000 / 2 + " ms.";
+                this.onCompletedResults.run(this.resultFileName, resultId, firstByteLatency, lastByteLatency, duration);
             }
+
+            synchronized (fileLock) {
+                if (bufferedStream != null) {
+                    try {
+                        bufferedStream.flush();
+                        bufferedStream.close();
+                    } catch (IOException ex) {
+                        Log.e("DUMP", "Close error: " + ex.getMessage());
+                    } finally {
+                        bufferedStream = null;
+                    }
+                }
+            }
+
+            this.resultFileName = null;
+
+            e.close();
+
+//            if (fos != null) {
+//                try {
+//                    fos.close();
+//                } catch (IOException ex) {
+//                    Log.e(LOGTAG, "Failed to close PCM file: " + ex.getMessage());
+//                } finally {
+//                    fos = null;
+//                }
+//            }
         });
 
         speechSynthesizer.SynthesisCanceled.addEventListener((o, e) -> {
@@ -229,7 +297,36 @@ public class SimpleSynthesizer {
 
     public void startSynthesizing(String text) throws ExecutionException, InterruptedException {
         if(!text.isEmpty()){
-            this.ssml = tryGenerateSsml(text);
+
+            String fileName = "TTS-" + new SimpleDateFormat("dd-MM-yyyy-hh-mm-ss").format(new Date()) + ".pcm";
+            this.resultFileName = fileName;
+            String mergeText = fileName.replace(".pcm", "")+ "---" + text;
+//            this.ssml = tryGenerateSsml(text);
+            this.ssml = tryGenerateSsml(mergeText);
+            currentPcmFilePath = this.context.getExternalFilesDir("/Dumps") + "/" + fileName;
+            synchronized (fileLock) {
+                try {
+                    if (bufferedStream != null) {
+                        bufferedStream.close();
+                    }
+                    FileOutputStream fos = new FileOutputStream(currentPcmFilePath);
+                    bufferedStream = new BufferedOutputStream(fos, BUFFER_SIZE);
+                } catch (IOException e) {
+                    Log.e("DUMP", "File creation failed: " + e.getMessage());
+                    return;
+                }
+            }
+
+//            try {
+//                if (fos != null) {
+//                    fos.close();
+//                }
+//                fos = new FileOutputStream(currentPcmFilePath);
+//            } catch (IOException e) {
+//                Log.e("DUMP", "Failed to create PCM file: " + e.getMessage());
+//                return;
+//            }
+
 //            this.audioDataStream = AudioDataStream.fromResult(speechSynthesizer.StartSpeakingSsmlAsync(ssml).get());
             this.speechSynthesizer.StartSpeakingSsmlAsync(ssml);
 
@@ -251,6 +348,10 @@ public class SimpleSynthesizer {
 
     public void setOnCompleted(Runnable onCompleted) {
         this.onCompleted = onCompleted;
+    }
+
+    public void setOnCompletedListener(OnCompletedListener onCompletedResults) {
+        this.onCompletedResults = onCompletedResults;
     }
 
     public void setOnCanceled(Runnable onCanceled) {

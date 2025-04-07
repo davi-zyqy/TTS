@@ -6,22 +6,26 @@ import android.util.Log;
 import com.example.synthesizerparalleltest.config.TTSConfig;
 
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class SimplePool {
     private static final String LOGTAG = "SynthesizerPool";
+    private AtomicInteger synCnt = new AtomicInteger(0);
     private final LinkedList<SimpleSynthesizer> pool = new LinkedList<>();
     //    private ThreadLocal<Synthesizer> currentSynthesizer = new ThreadLocal<>();
     private final Lock poolLock = new ReentrantLock();
     private final int maxPoolSize;
     private final TTSConfig baseConfig;
     private final Context context;
+    private final int maxSynSize;
     private boolean isDump;
 
-    public SimplePool(Context context, TTSConfig ttsConfig, int poolSize, boolean isDump) {
+    public SimplePool(Context context, TTSConfig ttsConfig, int poolSize, int maxSynSize, boolean isDump) {
 //        this.pool = new LinkedBlockingQueue<>(poolSize);
         this.maxPoolSize = poolSize;
+        this.maxSynSize = maxSynSize;
         this.isDump = isDump;
         this.baseConfig = ttsConfig;
         this.context = context;
@@ -42,6 +46,7 @@ public class SimplePool {
             SimpleSynthesizer synthesizer = createNewSynthesizer();
             if (synthesizer != null) {
                 pool.add(synthesizer);
+                synCnt.incrementAndGet();
             }
         }
     }
@@ -75,6 +80,14 @@ public class SimplePool {
                 // 设置回调：归还当前实例到池中
 //                synthesizer.setOnCompleted(() -> returnSynthesizer(synthesizer));
                 return synthesizer;
+            } else {
+                if (synCnt.intValue() < this.maxSynSize) {
+                    SimpleSynthesizer synthesizer = createNewSynthesizer();
+//                    pool.add(synthesizer);
+                    synCnt.incrementAndGet();
+                    return synthesizer;
+                }
+
             }
 
             // return createNewSynthesizer();
@@ -85,7 +98,12 @@ public class SimplePool {
     }
 
     public boolean isSynthesizerAvailable() {
-        return !pool.isEmpty();
+        if (synCnt.intValue() == this.maxSynSize) {
+            return !pool.isEmpty();
+        } else {
+            return true;
+        }
+
     }
 
 
@@ -95,7 +113,7 @@ public class SimplePool {
         }
         poolLock.lock();
         try {
-            if (pool.size() < maxPoolSize) {
+            if (pool.size() < synCnt.intValue()) {
                 pool.addLast(synthesizer);
             }
         } finally {
